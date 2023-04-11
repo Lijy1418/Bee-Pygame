@@ -1,183 +1,285 @@
-import math
-import random
-
 import pygame
-from pygame import mixer
-
-# Intialize the pygame
+import random 
+# important step so the program inhert all the methods
 pygame.init()
 
-# create the screen
-screen = pygame.display.set_mode((800, 600))
 
-# Background
-background = pygame.image.load('background.png')
+height, width = 800,800
+screen = pygame.display.set_mode((width, height))
+# change the title 
+pygame.display.set_caption('Roses')
 
-# Sound
-mixer.music.load("background.wav")
-mixer.music.play(-1)
 
-# Caption and Icon
-pygame.display.set_caption("Space Invader")
-icon = pygame.image.load('ufo.png')
-pygame.display.set_icon(icon)
+# Read 
 
-# Player
-playerImg = pygame.image.load('player.png')
-playerX = 370
-playerY = 480
-playerX_change = 0
 
-# Enemy
-enemyImg = []
-enemyX = []
-enemyY = []
-enemyX_change = []
-enemyY_change = []
-num_of_enemies = 6
 
-for i in range(num_of_enemies):
-    enemyImg.append(pygame.image.load('enemy.png'))
-    enemyX.append(random.randint(0, 736))
-    enemyY.append(random.randint(50, 150))
-    enemyX_change.append(4)
-    enemyY_change.append(40)
 
-# Bullet
 
-# Ready - You can't see the bullet on the screen
-# Fire - The bullet is currently moving
 
-bulletImg = pygame.image.load('bullet.png')
-bulletX = 0
-bulletY = 480
-bulletX_change = 0
-bulletY_change = 10
-bullet_state = "ready"
+#fa,d
+beeImg = pygame.image.load('smiling.png')
+background = pygame.image.load('bg.jpg')
+bomb = pygame.image.load('bomb.png')
+roseImg = pygame.image.load('rose.png')
+minusImg = pygame.image.load('minus.png')
+#flip
+fbeeImg = pygame.transform.flip(beeImg,True,False)
+image = beeImg
 
-# Score
 
-score_value = 0
+def objectX(obj, position): 
+   
+   if(position[0] == 'L'): #left section 
+      return 0
+   
+   elif(position[0] == 'R'): #right section
+      return screen.get_width() - obj.get_width()
+   
+   elif(position[0] == 'C'): #at center 
+      return (screen.get_width()/2) - (obj.get_width()/2)
+   
+   return 0
+
+
+def objectY(obj, position):
+   
+   if(position[0]== 'U'): # upper section
+      return 0 
+   
+   elif (position[0] == 'D'):# down section
+      return screen.get_height() - obj.get_height()
+   
+   elif(position[0] == 'C'):# center 
+      return (screen.get_height()/2) - (obj.get_height()/2)
+   return 0
+
+
+
+def move(image, x,y):
+    screen.blit(image,(x,y))
+
+
+def check(rect1 , rect2): 
+
+   if (rect1.colliderect(rect2)):
+      return True
+   else:
+       return False
+   
+
+def showText(txt, position):
+   output= font.render(txt, True, (255,255,255) )
+   x,y = objectX(output, position[0]), objectY(output,position[1])
+   move(output,x,y)
+
+                          
+                                   
+
+   
+
+
+class Entity: 
+   
+   def __init__(self, img): 
+      self.x = [] 
+      self.y = [] 
+      self.img = img 
+      self.speed = []
+      self.rightMost = objectX(self.img, 'R')
+      self.images = [] 
+      self.rect = img.get_rect()
+      (self.CenterX, self.CenterY) = self.rect.center   
+
+   def addValues(self, x, y, speed = random.uniform(0.1,0.8)):
+            self.x.append(x)
+            self.y.append(y)
+            self.images.append(self.img)
+            self.speed.append(speed)  
+   
+   def rectValues(self, i):
+      self.rect.x, self.rect.y = self.x[i], self.y[i]
+
+   def moveObjects(self):
+    for i in range(len(self.images)):
+       self.y[i]+=self.speed[i]
+       if(self.y[i] > screen.get_height()):
+         self.y[i] = -1*(self.img.get_height())
+         self.x[i] = random.randrange(0,self.rightMost)
+         self.speed[i] = random.uniform(0.1,0.8)
+       move(self.images[i],self.x[i], self.y[i])  
+
+
+
+
+
+bee_ = Entity(beeImg)
+bee_.addValues(objectX(bee_.img, 'C'), (screen.get_height())- (3 * beeImg.get_height()), 0)
+bee_.direction = True
+
+
+
+rose_ = Entity(roseImg)
+for i in range(3): 
+   rose_.addValues(random.randrange(0,rose_.rightMost), 0,random.uniform(0.1,0.8))
+
+
+
+minus_ = Entity(minusImg)
+minus_.addValues(bee_.x[0], bee_.y[0], 0.5)
+minus_.shooting = [False]
+
+
+
+bomb_ = Entity(bomb)
+bomb_.addValues(random.randrange(0,bomb_.rightMost), 0)
+
+
+
+
+
+gameOver = False
+
+
+#Result:
+score =0
 font = pygame.font.Font('freesansbold.ttf', 32)
-
-textX = 10
-testY = 10
-
-# Game Over
-over_font = pygame.font.Font('freesansbold.ttf', 64)
+ 
 
 
-def show_score(x, y):
-    score = font.render("Score : " + str(score_value), True, (255, 255, 255))
-    screen.blit(score, (x, y))
 
 
-def game_over_text():
-    over_text = over_font.render("GAME OVER", True, (255, 255, 255))
-    screen.blit(over_text, (200, 250))
+
+                                  
 
 
-def player(x, y):
-    screen.blit(playerImg, (x, y))
-
-
-def enemy(x, y, i):
-    screen.blit(enemyImg[i], (x, y))
-
-
-def fire_bullet(x, y):
-    global bullet_state
-    bullet_state = "fire"
-    screen.blit(bulletImg, (x + 16, y + 10))
-
-
-def isCollision(enemyX, enemyY, bulletX, bulletY):
-    distance = math.sqrt(math.pow(enemyX - bulletX, 2) + (math.pow(enemyY - bulletY, 2)))
-    if distance < 27:
-        return True
-    else:
-        return False
-
-
-# Game Loop
+#to hold the window
 running = True
 while running:
 
-    # RGB = Red, Green, Blue
-    screen.fill((0, 0, 0))
-    # Background Image
-    screen.blit(background, (0, 0))
+    
+    #background settings
+    screen.fill((66, 66, 66))
+    screen.blit(background, (0,0))
+
+     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-        # if keystroke is pressed check whether its right or left
+
+
+            #moving objects 
+              #LEFT
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                playerX_change = -5
+                bee_.images[0] = fbeeImg
+                bee_.speed[0] = -0.5
+
+
+
+               #RIGHT 
             if event.key == pygame.K_RIGHT:
-                playerX_change = 5
+                bee_.images[0] = beeImg
+                bee_.speed[0] = 0.5
+
+
+
+               #SPACE 
             if event.key == pygame.K_SPACE:
-                if bullet_state is "ready":
-                    bulletSound = mixer.Sound("laser.wav")
-                    bulletSound.play()
-                    # Get the current x cordinate of the spaceship
-                    bulletX = playerX
-                    fire_bullet(bulletX, bulletY)
+                 i =0 
+                 while(i< len(minus_.images)):
+                     if(not minus_.shooting[i]):
+                       minus_.shooting[i] = True
+                       minus_.x[i] = bee_.x[0]
+                       i+=1 
+                     i+=1 
+                 if(i == len(minus_.images)):
+                     minus_.addValues(bee_.x[0], bee_.y[0], 0.5)
+                     minus_.shooting.append(True)
 
         if event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                playerX_change = 0
+            if (event.key == pygame.K_LEFT and bee_.speed[0] != 0.5) or (event.key == pygame.K_RIGHT and bee_.speed[0] != - 0.5): 
+             bee_.speed[0] = 0 
 
-    # 5 = 5 + -0.1 -> 5 = 5 - 0.1
-    # 5 = 5 + 0.1
+               
 
-    playerX += playerX_change
-    if playerX <= 0:
-        playerX = 0
-    elif playerX >= 736:
-        playerX = 736
+    if(gameOver):
+      showText("Game Over", 'CC')
+    else:   
+     #bee 
+    
+     bee_.x[0] += bee_.speed[0]
+     if(bee_.x[0] < -1 * bee_.img.get_width()): 
+        bee_.x[0] = screen.get_width()
+     if(bee_.x[0] > screen.get_width() ): 
+        bee_.x[0] = -1 * bee_.img.get_width()
+     move(bee_.images[0],bee_.x[0], bee_.y[0])
+     
+ 
 
-    # Enemy Movement
-    for i in range(num_of_enemies):
+     #rose
+     rose_.moveObjects()
+     #bomb
+     bomb_.moveObjects()
+ 
+     
 
-        # Game Over
-        if enemyY[i] > 440:
-            for j in range(num_of_enemies):
-                enemyY[j] = 2000
-            game_over_text()
-            break
+     #minus 
+     i =0 
+     while (i < len(minus_.images)): 
+        if(minus_.shooting[i]):
+         minus_.y[i] -= 0.5   
+         move(minus_.images[i],minus_.x[i], minus_.y[i])
+         if(minus_.y[i] <=0 ): 
+          minus_.images.pop(i)
+          minus_.x.pop(i)
+          minus_.y.pop(i)
+          minus_.shooting.pop(i)
+          i= i-1
+        i+=1
+          
 
-        enemyX[i] += enemyX_change[i]
-        if enemyX[i] <= 0:
-            enemyX_change[i] = 4
-            enemyY[i] += enemyY_change[i]
-        elif enemyX[i] >= 736:
-            enemyX_change[i] = -4
-            enemyY[i] += enemyY_change[i]
 
-        # Collision
-        collision = isCollision(enemyX[i], enemyY[i], bulletX, bulletY)
-        if collision:
-            explosionSound = mixer.Sound("explosion.wav")
-            explosionSound.play()
-            bulletY = 480
-            bullet_state = "ready"
-            score_value += 1
-            enemyX[i] = random.randint(0, 736)
-            enemyY[i] = random.randint(50, 150)
 
-        enemy(enemyX[i], enemyY[i], i)
+     #check rose and minus
+     for i in range (3): 
+        for j in range(len(minus_.images)): 
+          rose_.rectValues( i)
+          minus_.rectValues(j)
+          if(check(minus_.rect,rose_.rect) and minus_.shooting[j]):
+           rose_.x[i], rose_.y[i] = random.randrange(0,rose_.rightMost), -10
+           rose_.speed[i] = random.uniform(0.1,0.8)
+           minus_.y[j]= bee_.y[0]
+           minus_.shooting[j] = False
+           score+=1 
 
-    # Bullet Movement
-    if bulletY <= 0:
-        bulletY = 480
-        bullet_state = "ready"
 
-    if bullet_state is "fire":
-        fire_bullet(bulletX, bulletY)
-        bulletY -= bulletY_change
 
-    player(playerX, playerY)
-    show_score(textX, testY)
+     #check bomb and minus 
+     for i in range(len(minus_.images)):
+      bomb_.rectValues( 0)
+      minus_.rectValues(i)
+      if(check(bomb_.rect, minus_.rect) and minus_.shooting[i]):
+        bomb_.x[0], bomb_.y[0] = random.randrange(0,bomb_.rightMost), -10
+        bomb_.speed[0] = random.uniform(0.1,0.8)
+        gameOver = True
+
+
+
+    showText("Score = "+str(score),'LU')
+    
+
+
+
     pygame.display.update()
+
+
+
+
+
+
+
+
+
+
